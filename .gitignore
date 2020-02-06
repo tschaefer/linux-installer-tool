@@ -41,3 +41,6 @@ inc/
 ### VSCode
 .vscode/
 *.code-workspace
+
+### Custom
+*.bak
