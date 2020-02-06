@@ -1,0 +1,204 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use FindBin qw($Bin);
+use lib "$Bin/../lib";
+
+use utf8;
+use English qw(-no_match_vars);
+
+use File::Basename;
+use Getopt::Long;
+use Log::Log4perl;
+use Pod::Usage;
+use Try::Tiny;
+
+sub print_usage {
+    return pod2usage( -exitval => 255, -verbose => 0 );
+}
+
+sub print_help {
+    return pod2usage(
+        -exitval  => 0,
+        -verbose  => 99,
+        -sections => 'SYNOPSIS|OPTIONS|PARAMETERS',
+    );
+}
+
+sub print_man {
+    return pod2usage( -exitval => 0, -verbose => 2 );
+}
+
+sub parse_opts {
+    my ( $opts, $args, $help, $man );
+
+    my $argc = scalar @ARGV;
+
+    GetOptions(
+        "config-file|f=s"     => \$opts->{'cfgfile'},
+        "log-config-file|l=s" => \$opts->{'logcfgfile'},
+        "root-path|r=s"       => \$opts->{'root'},
+        "help"                => \$help,
+        "man"                 => \$man,
+    ) or print_usage();
+
+    exit print_usage() if ( ( $help || $man ) && $argc != 1 );
+    exit print_help()  if ($help);
+    exit print_man()   if ($man);
+    exit print_usage()
+      if ( !$opts->{'cfgfile'} || !$opts->{'logcfgfile'} || !$opts->{'root'} );
+
+    my %actions = (
+        'mount'  => 1,
+        'umount' => 1,
+        'chroot' => 1,
+        'spawn'  => 1,
+    );
+
+    my $basename = basename($PROGRAM_NAME);
+    ( $args->{'action'} ) = $basename =~ /linux-installer-([a-z]+)/;
+
+    $args->{'action'} = shift @ARGV if ( $args->{'action'} eq 'tool' );
+    exit print_usage()
+      if ( !$args->{'action'} || !$actions{ $args->{'action'} } );
+
+    $args->{'device'} = shift @ARGV;
+    exit print_usage() if ( !$args->{'device'} );
+
+    return ( $opts, $args );
+}
+
+sub run {
+    my ( $opts, $args ) = parse_opts();
+
+    Log::Log4perl->init( $opts->{'logcfgfile'} );
+
+    my $package = sprintf "Linux/Installer/Tool/%s.pm",
+      ucfirst $args->{'action'};
+    require $package;
+
+    $package =~ s/\//::/g;
+    $package =~ s/\.pm//;
+
+    my $tool = $package->new(
+        {
+            configfile => $opts->{'cfgfile'},
+            device     => $args->{'device'},
+            root       => $opts->{'root'},
+        }
+    );
+
+    my $rc = try {
+        $tool->run();
+        1;
+    }
+    catch {
+        my $logger = Log::Log4perl->get_logger();
+        $logger->error( ( split / at/ )[0] );
+    };
+
+    exit $rc ? 0 : 1;
+}
+
+run();
+
+__END__
+
+=encoding utf8
+
+=head1 NAME
+
+B<linux-installer-tool> - Swiss Army knife for the simple installer for embedded Linux systems.
+
+=head1 SYNOPSIS
+
+linux-installer-tool --config-file|-f FILE --log-config-file|-l FILE ...
+
+linux-installer-tool ... --root-path|-r PATH ACTION DISK
+
+linux-installer-ACTION ... --root-path|-r PATH DISK
+
+linux-installer-tool --help|-h | --man|-m
+
+linux-installer-ACTION --help|-h | --man|-m
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<--config-file|-f> FILE
+
+Specifies a configuration file in JSON format.
+
+=item B<--log-config-file|-l> FILE
+
+Specifies a Log::Log4perl configuration file.
+
+=item B<--root-path> PATH
+
+Specifies the root mountpoint.
+
+=back
+
+=head1 PARAMETERS
+
+=over 8
+
+=item B<ACTION>
+
+Action to run.
+
+See L<DESCRIPTION>.
+
+=item B<DISK>
+
+Target disk for installation.
+
+=back
+
+=head1 DESCRIPTION
+
+linux-installer-tool is a Swiss Army knife for the simple installer for embedded Linux systems.
+
+=over 2
+
+=item *
+
+mount - Open crypted partitions and mount filesystems.
+
+=item *
+
+umount - Umount filesystemd and close crypted partitions.
+
+=item *
+
+chroot - Mount filesystems, chroot into OS and umount filesystems afterwards.
+
+=item *
+
+spawn - Mount filesystems, spawn OS and umount filesystems afterwards.
+
+=back
+
+The linux-installer-tool configuration (--config-file|-f) is provided in JSON
+or YAML format and describes the layout. The action is logged by Log::Log4perl
+customised by the log configuration (--log-config-file|-l).
+
+=head1 SEE ALSO
+
+L<Linux::Installer> L<Log::Log4perl>
+
+=head1 AUTHORS
+
+Tobias Schäfer L<github@blackox.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2020 by Tobias Schäfer.
+
+This is free software; you can redistribute it and/or modify it under the same
+terms as the Perl 5 programming language system itself.
+
+=cut

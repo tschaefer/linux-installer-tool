@@ -1,0 +1,15 @@
+lib/Linux/Installer/Tool.pm
+lib/Linux/Installer/Tool/Mount.pm
+lib/Linux/Installer/Tool/Umount.pm
+lib/Linux/Installer/Tool/Chroot.pm
+lib/Linux/Installer/Tool/Spawn.pm
+MANIFEST
+bin/linux-installer-tool
+bin/linux-installer-mount
+bin/linux-installer-ummount
+bin/linux-installer-chroot
+bin/linux-installer-nspawn
+Makefile.PL
+Changes
+README
+README.md
