@@ -6,9 +6,9 @@ lib/Linux/Installer/Tool/Spawn.pm
 MANIFEST
 bin/linux-installer-tool
 bin/linux-installer-mount
-bin/linux-installer-ummount
+bin/linux-installer-umount
 bin/linux-installer-chroot
-bin/linux-installer-nspawn
+bin/linux-installer-spawn
 Makefile.PL
 Changes
 README
